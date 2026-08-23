@@ -1,7 +1,6 @@
 # ==========================================
 # 0. AUTO-ELEVATE TO ADMINISTRATOR
 # ==========================================
-# This ensures the script always runs as Admin, especially when resuming after reboot
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
@@ -10,7 +9,6 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 # ==========================================
 # INITIALIZATION & STATE CHECK
 # ==========================================
-# We use a flag file to remember if we already completed Phase 1
 $FlagFile = "C:\IT_Setup_Phase2_Flag.txt"
 $CurrentScript = $PSCommandPath
 
@@ -18,9 +16,14 @@ if (-not (Test-Path $FlagFile)) {
     
     Write-Host "=== PHASE 1: SYSTEM SETUP & INSTALLATIONS ===" -ForegroundColor Cyan
 
-    # 1. Power Plan Configuration
-    Write-Host "Configuring Power Plan: Disabling Sleep when plugged in..." -ForegroundColor Cyan
-    powercfg /change standby-timeout-ac 0
+    # 1. Power Plan Configuration (Updated)
+    Write-Host "Configuring Power Plan (Screen and Sleep settings)..." -ForegroundColor Cyan
+    # Plugged in (AC)
+    powercfg /change standby-timeout-ac 0    # Never sleep on AC
+    powercfg /change monitor-timeout-ac 15   # Screen off after 15 mins on AC
+    # On Battery (DC)
+    powercfg /change standby-timeout-dc 30   # Sleep after 30 mins on Battery
+    powercfg /change monitor-timeout-dc 15   # Screen off after 15 mins on Battery
 
     # 2. Timezone and Language
     Write-Host "Setting Timezone to Israel..." -ForegroundColor Cyan
@@ -124,10 +127,8 @@ else {
         }
     }
 
-    # Cleanup: Remove the flag file 
+    # Cleanup
     Remove-Item -Path $FlagFile -Force
-    
-    # Optional: Delete the script itself to leave the computer clean
     if (Test-Path "C:\Setup.ps1") {
         Remove-Item -Path "C:\Setup.ps1" -Force
     }
