@@ -26,4 +26,4 @@ This PowerShell script automates the initial setup and provisioning of new Windo
 Run the following one-liner in an elevated PowerShell (Run as Administrator) to execute the script directly from GitHub without needing a USB drive:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri "[https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/NewComputer.ps1](https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/NewComputer.ps1)" -OutFile "C:\Setup.ps1"; C:\Setup.ps1
+Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri "https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1" -OutFile "C:\Setup.ps1"; C:\Setup.ps1
