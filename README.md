@@ -39,6 +39,7 @@ Copy and paste the following one-liner into the PowerShell window and press Ente
 
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri "[https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1](https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1)" -OutFile "C:\Setup.ps1"; C:\Setup.ps1
+```
 
 3. Phase 1 (Automated Setup)
 Let the script run. It will automatically configure power settings, set regional languages, remove bloatware, and silently install Chrome, Adobe, and Office.
