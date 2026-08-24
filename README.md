@@ -45,7 +45,7 @@ Open the Start menu, type `PowerShell`, right-click on it, and select **Run as A
 Copy and paste the following one-liner into the PowerShell window and press Enter:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri "[https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1](https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1)" -OutFile "C:\Setup.ps1"; C:\Setup.ps1
+Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri "https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1" -OutFile "C:\Setup.ps1"; C:\Setup.ps1
 ```
 3. Phase 1 (Automated Setup)
 Let the script run. It will check your network, prompt you for the VPN installation, and then automatically configure power settings, system tweaks, regional languages, remove bloatware, and silently install your software in parallel.
