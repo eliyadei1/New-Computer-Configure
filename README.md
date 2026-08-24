@@ -9,20 +9,27 @@ This PowerShell script automates the initial setup and provisioning of new Windo
   * *Plugged in (AC):* Never sleep, turn off the screen after 15 minutes.
   * *On Battery (DC):* Sleep after 30 minutes, turn off the screen after 15 minutes.
 * **Regional Settings:** Automatically configures Timezone (Israel Standard Time), Keyboard Languages (English, Hebrew), and sets the System Locale to `en-IL`.
+* **Universal System Tweaks:**
+  * Restores the classic Windows 10 Context Menu (right-click menu).
+  * Disables basic OS telemetry and data collection for privacy.
+  * Declutters the Taskbar by removing the default Chat and Widgets icons.
 * **Debloat:** Removes pre-installed (UWP) Office bloatware and OneNote from the current system image to prevent conflicts.
-* **Software Deployment (Winget):** Silently downloads and installs official, up-to-date versions of:
+* **Network Awareness (Offline Mode):** Verifies internet connectivity before attempting downloads. If offline, it applies all local system tweaks and gracefully skips the software deployment phase without throwing errors.
+* **Parallel Software Deployment (Winget):** Uses PowerShell background jobs to simultaneously download and install official versions of:
   * Google Chrome
   * Adobe Acrobat Reader (64-bit)
   * Microsoft 365 Apps (Office)
+  * *Optional:* Prompts the user to optionally install Fortinet FortiClient VPN.
 * **Desktop Shortcuts:** Automatically generates clean desktop shortcuts for Word, Excel, PowerPoint, and Outlook.
-* **System Rename:** Prompts for a new standard computer name and applies it.
-* **State Memory & Auto-Resume:** Creates a flag file and a `RunOnce` registry key to ensure the script "remembers" where it stopped and automatically resumes after the restart.
+* **System Rename & State Memory:** Prompts for a new standard computer name, creates a flag file and a `RunOnce` registry key to ensure the script "remembers" where it stopped, and triggers a system restart.
 
-**Phase 2: Domain Join (Auto-runs after reboot)**
+**Phase 2: Domain Preparation & Join (Auto-runs after reboot)**
 * **UAC Auto-Elevation:** Automatically requests Administrator privileges upon resuming.
+* **Time Synchronization:** Forces a time sync with external servers (`w32tm`) before joining the domain to prevent Kerberos authentication errors.
 * **Domain Integration:** Prompts the administrator to join the computer to either:
   1. Entra ID (Azure AD)
   2. Local Active Directory
+  3. Skip
 * **Self-Cleanup:** Automatically deletes the setup flag files and removes the script itself from the C: drive to leave a completely clean environment.
 
 ---
@@ -40,9 +47,8 @@ Copy and paste the following one-liner into the PowerShell window and press Ente
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri "[https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1](https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1)" -OutFile "C:\Setup.ps1"; C:\Setup.ps1
 ```
-
 3. Phase 1 (Automated Setup)
-Let the script run. It will automatically configure power settings, set regional languages, remove bloatware, and silently install Chrome, Adobe, and Office.
+Let the script run. It will check your network, prompt you for the VPN installation, and then automatically configure power settings, system tweaks, regional languages, remove bloatware, and silently install your software in parallel.
 Once the installations are complete, the script will pause and prompt you to enter the new computer name.
 
 4. Automatic Restart
@@ -50,7 +56,7 @@ Type the desired computer name and press Enter. The computer will rename itself 
 
 5. Phase 2 (Domain Join)
 Log into Windows after the restart. The script will automatically pop up and prompt for UAC Admin approval (click Yes).
-Since the script remembers its state, it skips the installations and directly asks you to choose the domain type:
+It will force a time sync and directly ask you to choose the domain type:
 
 Type 1 for Entra ID (Azure AD).
 
