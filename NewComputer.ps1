@@ -23,41 +23,62 @@ if (-not (Test-Path $FlagFile)) {
     powercfg /change standby-timeout-dc 30   
     powercfg /change monitor-timeout-dc 15   
 
-    # 2. Timezone and Language
+    # 2. Timezone and Language Configuration
     Write-Host "Setting Timezone to Israel..." -ForegroundColor Cyan
     Set-TimeZone -Id "Israel Standard Time"
-
-    Write-Host "Configuring Languages (Hebrew, en-IL locale)..." -ForegroundColor Cyan
-    $LangList = New-WinUserLanguageList "en-US"
-    $LangList.Add("he-IL")
-    Set-WinUserLanguageList $LangList -Force
-    Set-Culture "en-IL"
-    Set-WinSystemLocale "en-IL"
     Set-WinHomeLocation -GeoId 117
+
+    Write-Host ""
+    Write-Host "Select System Display and Management Language:" -ForegroundColor Yellow
+    Write-Host "1 - Hebrew (Display, Keyboard, and Locale)"
+    Write-Host "2 - English Israel (English Display, Hebrew/English Keyboard, IL Locale)"
+    $LangChoice = Read-Host "Select an option (1 or 2)"
+
+    if ($LangChoice -eq '1') {
+        Write-Host "Applying Hebrew language settings..." -ForegroundColor Cyan
+        $LangList = New-WinUserLanguageList "he-IL"
+        $LangList.Add("en-US")
+        Set-WinUserLanguageList $LangList -Force
+        Set-WinUILanguageOverride -Language "he-IL"
+        Set-Culture "he-IL"
+        Set-WinSystemLocale "he-IL"
+    } else {
+        Write-Host "Applying English (Israel) language settings..." -ForegroundColor Cyan
+        $LangList = New-WinUserLanguageList "en-US"
+        $LangList.Add("he-IL")
+        Set-WinUserLanguageList $LangList -Force
+        Set-WinUILanguageOverride -Language "en-US"
+        Set-Culture "en-IL"
+        Set-WinSystemLocale "he-IL" # he-IL for non-Unicode to prevent gibberish in old Israeli software
+    }
 
     # 3. Universal Tweaks (Context Menu, Privacy, Taskbar Declutter)
     Write-Host "Applying Universal System Tweaks..." -ForegroundColor Cyan
-    # Restore Windows 10 Classic Context Menu
-    $ContextMenuPath = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32"
-    if (-not (Test-Path $ContextMenuPath)) { New-Item -Path $ContextMenuPath -Force | Out-Null }
-    Set-ItemProperty -Path $ContextMenuPath -Name "(Default)" -Value ""
-    
-    # Disable Telemetry / Data Collection
-    $TelemetryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
-    if (-not (Test-Path $TelemetryPath)) { New-Item -Path $TelemetryPath -Force | Out-Null }
-    Set-ItemProperty -Path $TelemetryPath -Name "AllowTelemetry" -Value 0 -Type DWord
-    
-    # Remove Chat and Widgets from Taskbar
-    $TaskbarPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
-    Set-ItemProperty -Path $TaskbarPath -Name "TaskbarMn" -Value 0 -Type DWord -Force # Chat
-    Set-ItemProperty -Path $TaskbarPath -Name "TaskbarDa" -Value 0 -Type DWord -Force # Widgets
+    try {
+        # Restore Windows 10 Classic Context Menu
+        $ContextMenuPath = "HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32"
+        if (-not (Test-Path $ContextMenuPath)) { New-Item -Path $ContextMenuPath -Force -ErrorAction SilentlyContinue | Out-Null }
+        Set-ItemProperty -Path $ContextMenuPath -Name "(Default)" -Value "" -ErrorAction SilentlyContinue
+        
+        # Disable Telemetry / Data Collection
+        $TelemetryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
+        if (-not (Test-Path $TelemetryPath)) { New-Item -Path $TelemetryPath -Force -ErrorAction SilentlyContinue | Out-Null }
+        Set-ItemProperty -Path $TelemetryPath -Name "AllowTelemetry" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+        
+        # Remove Chat and Widgets from Taskbar
+        $TaskbarPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        Set-ItemProperty -Path $TaskbarPath -Name "TaskbarMn" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+        Set-ItemProperty -Path $TaskbarPath -Name "TaskbarDa" -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+    } catch {
+        # Suppress unauthorized access errors on fresh profiles
+    }
 
     # 4. Remove Pre-installed Office & OneNote (Bloatware)
     Write-Host "Removing pre-installed Office apps and OneNote..." -ForegroundColor Cyan
     $AppxToRemove = @("*MicrosoftOfficeHub*", "*OneNote*", "*Office.Desktop*")
     foreach ($App in $AppxToRemove) {
-        Get-AppxPackage -Name $App -AllUsers | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
-        Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $App } | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+        Get-AppxPackage -Name $App -AllUsers 2>$null | Remove-AppxPackage -AllUsers 2>$null
+        Get-AppxProvisionedPackage -Online 2>$null | Where-Object { $_.DisplayName -like $App } | Remove-AppxProvisionedPackage -Online 2>$null
     }
 
     # 5. OFFLINE MODE CHECK & INSTALLATIONS
@@ -70,6 +91,7 @@ if (-not (Test-Path $FlagFile)) {
     }
     else {
         # Prompt for VPN if online
+        Write-Host ""
         $InstallVPN = Read-Host "Do you want to install Fortinet FortiClient VPN? (Y/N)"
         
         $AppsToInstall = @(
