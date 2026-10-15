@@ -1,0 +1,17 @@
+name: PowerShell checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows PowerShell 5.1 regression checks
+        shell: powershell
+        run: ./tests/Run-Tests.ps1
+      - name: PowerShell 7 regression checks
+        shell: pwsh
+        run: ./tests/Run-Tests.ps1
