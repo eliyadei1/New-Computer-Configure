@@ -1,68 +1,127 @@
-# Windows Endpoint Automated Provisioning Script
+# New Computer Configure
 
-This PowerShell script automates the initial setup and provisioning of new Windows workstations. It is designed to minimize IT manual intervention by dividing the setup process into two automated phases, utilizing an automatic resume mechanism after the required system reboot.
+A small, interactive PowerShell assistant for preparing a Windows workstation in Israel.
+Choose the setup once, review it, and run it. Every action has its own saved result;
+rerunning retries unfinished actions and skips successful ones.
 
-## Key Features
+## Requirements
 
-**Phase 1: System Configuration & Installations**
-* **Advanced Power Management:** 
-  * *Plugged in (AC):* Never sleep, turn off the screen after 15 minutes.
-  * *On Battery (DC):* Sleep after 30 minutes, turn off the screen after 15 minutes.
-* **Regional Settings:** Automatically configures Timezone (Israel Standard Time), Keyboard Languages (English, Hebrew), and sets the System Locale to `en-IL`.
-* **Universal System Tweaks:**
-  * Restores the classic Windows 10 Context Menu (right-click menu).
-  * Disables basic OS telemetry and data collection for privacy.
-  * Declutters the Taskbar by removing the default Chat and Widgets icons.
-* **Debloat:** Removes pre-installed (UWP) Office bloatware and OneNote from the current system image to prevent conflicts.
-* **Network Awareness (Offline Mode):** Verifies internet connectivity before attempting downloads. If offline, it applies all local system tweaks and gracefully skips the software deployment phase without throwing errors.
-* **Parallel Software Deployment (Winget):** Uses PowerShell background jobs to simultaneously download and install official versions of:
-  * Google Chrome
-  * Adobe Acrobat Reader (64-bit)
-  * Microsoft 365 Apps (Office)
-  * *Optional:* Prompts the user to optionally install Fortinet FortiClient VPN.
-* **Desktop Shortcuts:** Automatically generates clean desktop shortcuts for Word, Excel, PowerPoint, and Outlook.
-* **System Rename & State Memory:** Prompts for a new standard computer name, creates a flag file and a `RunOnce` registry key to ensure the script "remembers" where it stopped, and triggers a system restart.
+- Windows 10/11, 64-bit **Windows PowerShell 5.1**, running as Administrator.
+- Run as the account whose language, keyboard, taskbar and desktop should be configured.
+  Using another administrator's credentials configures that administrator's profile.
+  This script does not provision future domain-user profiles.
+- Current **App Installer / WinGet** for selected application installations. If unavailable,
+  install/update App Installer, then rerun; local configuration can still proceed.
+- The selected Windows display language must already be installed through Windows Settings.
+  Missing language packs are reported as a failed, retryable step.
+- Internet access to download selected applications; organization connectivity/VPN and a
+  supported Windows edition for device join. Home editions do not support AD/Entra device join.
+- Office activation, VPN configuration and organization permissions are separate requirements.
 
-**Phase 2: Domain Preparation & Join (Auto-runs after reboot)**
-* **UAC Auto-Elevation:** Automatically requests Administrator privileges upon resuming.
-* **Time Synchronization:** Forces a time sync with external servers (`w32tm`) before joining the domain to prevent Kerberos authentication errors.
-* **Domain Integration:** Prompts the administrator to join the computer to either:
-  1. Entra ID (Azure AD)
-  2. Local Active Directory
-  3. Skip
-* **Self-Cleanup:** Automatically deletes the setup flag files and removes the script itself from the C: drive to leave a completely clean environment.
+## Run
 
----
-
-## How to Use (Step-by-Step Guide)
-
-You do not need to download the file manually or use a USB drive. Just follow these steps on the new computer:
-
-**1. Launch PowerShell**
-Open the Start menu, type `PowerShell`, right-click on it, and select **Run as Administrator**.
-
-**2. Fetch and Execute the Script**
-Copy and paste the following one-liner into the PowerShell window and press Enter:
+Download [NewComputer.ps1](https://github.com/eliyadei1/New-Computer-Configure/blob/main/NewComputer.ps1)
+and review it. Open **64-bit Windows PowerShell as Administrator** in that folder:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri "https://raw.githubusercontent.com/eliyadei1/New-Computer-Configure/main/NewComputer.ps1" -OutFile "C:\Setup.ps1"; C:\Setup.ps1
+Set-ExecutionPolicy Bypass -Scope Process -Force
+.\NewComputer.ps1
 ```
-3. Phase 1 (Automated Setup)
-Let the script run. It will check your network, prompt you for the VPN installation, and then automatically configure power settings, system tweaks, regional languages, remove bloatware, and silently install your software in parallel.
-Once the installations are complete, the script will pause and prompt you to enter the new computer name.
 
-4. Automatic Restart
-Type the desired computer name and press Enter. The computer will rename itself and automatically initiate a restart within 10 seconds.
+The wizard asks for:
 
-5. Phase 2 (Domain Join)
-Log into Windows after the restart. The script will automatically pop up and prompt for UAC Admin approval (click Yes).
-It will force a time sync and directly ask you to choose the domain type:
+1. Hebrew or English display language, with Hebrew/English keyboards and Israeli regional settings.
+2. An optional computer name (1-15 characters, letters/digits/internal hyphens, at least one letter).
+3. Individual applications: Chrome, Adobe Reader, Office and optional FortiClient VPN.
+4. Entra ID, local Active Directory, or an explicit skip.
+5. Optional advanced settings: classic context menu, hidden Chat/Widgets, and removal of
+   MicrosoftOfficeHub **for the current user only**. These default to off.
 
-Type 1 for Entra ID (Azure AD).
+The final preview includes all choices and the power settings: no AC sleep, screen off after
+15 minutes; battery sleep after 30 minutes and screen off after 15 minutes.
+Nothing is applied until you confirm the preview. Installing selected applications accepts
+their package and source agreements. Settings may be overridden by organizational policy;
+optional shell registry settings depend on the Windows build.
 
-Type 2 for Local Active Directory.
+## Progress, restart and recovery
 
-Type 3 to skip.
+- Applications install **sequentially**. Each has an exit-code check and a subsequent
+  `winget list` verification. Already installed applications are left alone, including their version.
+- There is no ping-based internet gate. A download failure remains failed, with diagnostics;
+  it is never silently converted into a completed offline setup.
+- Configuration errors are retained alongside successful results. Fix the cause and rerun
+  to retry only unfinished actions. Retrying an action interrupted mid-operation may repeat
+  that action, so the operations are designed to tolerate repeated execution.
+- After language/name changes, setup offers a restart with **No as the default**. Save your
+  work before selecting Yes. The script does not force an automatic countdown restart.
+- A scheduled task resumes at the **next sign-in of the same administrator account**, in an
+  interactive window. It uses the account's existing interactive token; no password is stored.
+  Signing in as another user does not resume the setup.
+- The task runs a stable copy at `%ProgramData%\NewComputerConfigure\NewComputer.ps1`.
+  The folder restricts modification to Administrators and SYSTEM. Do not place unrelated files there.
+- To resume manually from an elevated Windows PowerShell window:
 
-6. Cleanup
-The relevant Windows settings window will open based on your choice. The script will then automatically delete its temporary files, memory flags, and itself from the system, leaving the workstation completely ready for the end-user.
+```powershell
+& "$env:ProgramData\NewComputerConfigure\NewComputer.ps1" -Resume
+```
+
+The folder also contains `state.json` (atomically replaced checkpoints) and timestamped
+`session-*.log` transcripts. Keep these when investigating a failure. They may contain
+computer/user/application details; review before sharing. Credentials are entered only
+through the native Windows join interface, not collected by this script.
+
+The organization step opens Windows Settings or System Properties and then checks actual
+device membership. Entra work-account registration alone is insufficient. A failed/pending
+join stays unfinished across restarts. Verification checks membership type, not a specific
+tenant/domain, licensing, Intune enrollment, compliance, or application usability.
+
+Setup reports completion only when all selected steps have succeeded and the requested
+name is active after restart. The resume task is then removed; logs, state and the script
+are retained. A completed setup will display its saved results without applying changes again.
+Package detection verifies registration, not that every application has been activated or launched.
+
+## Changing a saved plan
+
+The saved plan is fixed during recovery so choices do not change unexpectedly halfway through.
+To intentionally create a new plan, first inspect the old results, close any running setup, and
+remove only this tool's resume task if present:
+
+```powershell
+Get-ScheduledTask -TaskName 'NewComputerConfigure-Resume' -ErrorAction SilentlyContinue |
+    Unregister-ScheduledTask -Confirm:$false
+```
+
+Rename `%ProgramData%\NewComputerConfigure\state.json` to a backup filename, then rerun the
+downloaded script **without** `-Resume`. Keep the backup and logs until the new setup is verified.
+This resets tracking, not Windows settings or installed applications; there is no blanket rollback.
+To stop automatic resume without resetting progress, remove the task using the same command.
+
+## Migrating from the original script
+
+Do not overlap the old and new flows. If `C:\IT_Setup_Phase2_Flag.txt` exists, this version
+stops before changing the workstation. Review/finish the old setup first. If deliberately
+abandoning it, inspect and remove its `ITSetupPhase2` RunOnce entry and flag yourself before
+starting a new plan. No legacy files or arbitrary `C:\Setup.ps1` are deleted by this version.
+
+## Validation
+
+```powershell
+.\tests\Run-Tests.ps1
+```
+
+The dependency-free suite parses the script and exercises input validation, state round trips,
+failure recovery, interrupted steps, native exit handling, package install verification and
+AD/Entra membership detection. External provisioning commands are mocked; tests do not install
+software, change settings, register tasks or join a domain. GitHub Actions runs the checks
+on Windows PowerShell 5.1 and PowerShell 7; provisioning itself targets Windows PowerShell 5.1.
+
+Before organization-wide use, validate on a disposable Windows VM: missing WinGet, missing
+language pack, interrupted download, installed applications, restart deferred/completed, task
+resume with the original account, and your organization's AD/Entra join flow. Real installers,
+UAC, logon tasks and Windows Settings require that integration check.
+
+## Implementation references
+
+- [WinGet install options](https://learn.microsoft.com/en-us/windows/package-manager/winget/install)
+- [Interactive scheduled-task principals](https://learn.microsoft.com/en-us/powershell/module/scheduledtasks/new-scheduledtaskprincipal)
+- [Entra device join status with dsregcmd](https://learn.microsoft.com/en-us/entra/identity/devices/troubleshoot-device-dsregcmd)
