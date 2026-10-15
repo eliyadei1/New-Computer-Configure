@@ -113,3 +113,7 @@ try {
     # This is a fresh, explicitly allocated test directory only.
     if (Test-Path -LiteralPath $scratch) { Remove-Item -LiteralPath $scratch -Recurse -Force }
 }
+
+# GitHub's shell wrapper propagates LASTEXITCODE from deliberately failing native-command tests.
+# Reaching this line means every assertion and cleanup succeeded; return an explicit success code.
+exit 0
